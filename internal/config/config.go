@@ -16,14 +16,15 @@ import (
 )
 
 var (
-	Cfg   = &Config{}
-	Md    = make(MatchDomains)
-	mutex = &sync.RWMutex{}
+	Cfg = &Config{}
+	Md  = &MatchDomains{Regex: make(map[*regexp.Regexp][]string)}
 )
 
 type (
-	MatchDomains map[*regexp.Regexp][]string
-
+	MatchDomains struct {
+		mu    sync.RWMutex
+		Regex map[*regexp.Regexp][]string
+	}
 	Upstream struct {
 		Name       string           `yaml:"name"`
 		DNSServers []string         `yaml:"servers"`
@@ -38,13 +39,16 @@ type (
 	}
 
 	Config struct {
+		mu        sync.RWMutex
 		Server    Server     `yaml:"server"`
 		Upstreams []Upstream `yaml:"upstreams"`
 		// ExternalUpstreams is a list of URLs to fetch the upstreams from.
-		ExternalUpstreams []ExternalUpstreamConfig `yaml:"external_upstreams"`
+		ExternalUpstreams         []ExternalUpstreamConfig `yaml:"external_upstreams"`
+		ExternalUpstreamsInternal int                      `yaml:"external_upstreams_internal"`
 	}
 
 	ExternalUpstreamConfig struct {
+		Interval string `yaml:"interval"`
 		URL      string `yaml:"url"`
 		Token    string `yaml:"token"`
 		Username string `yaml:"username"`
@@ -70,11 +74,13 @@ func (u *Upstream) CompileDnsServers() {
 }
 
 func (m *MatchDomains) Add(regex *regexp.Regexp, servers []string) {
-	(*m)[regex] = servers
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.Regex[regex] = servers
 }
 
 func (m *MatchDomains) Get(domain string) []string {
-	for regex, servers := range *m {
+	for regex, servers := range m.Regex {
 		if regex.MatchString(domain) {
 			return servers
 		}
@@ -84,13 +90,11 @@ func (m *MatchDomains) Get(domain string) []string {
 
 // Clear clears the MatchDomains map.
 func (m *MatchDomains) Clear() {
-	*m = make(map[*regexp.Regexp][]string)
+	m.Regex = make(map[*regexp.Regexp][]string)
 }
 
 // Compute MatchDomains from the Upstreams
 func (m *MatchDomains) ComputeMatchDomains() {
-	mutex.Lock()
-	defer mutex.Unlock()
 	m.Clear()
 	for _, u := range Cfg.Upstreams {
 		for _, r := range u.Regex {
@@ -113,8 +117,7 @@ func ReadConfig(file string) error {
 	}
 	defer osFile.Close()
 
-	mutex.Lock()
-	defer mutex.Unlock()
+	Cfg.mu.Lock()
 
 	// Decode the file
 	if err := yaml.NewDecoder(osFile).Decode(Cfg); err != nil {
@@ -131,6 +134,11 @@ func ReadConfig(file string) error {
 		Cfg.Upstreams[i].CompileRegex()
 		Cfg.Upstreams[i].CompileDnsServers()
 	}
+
+	Cfg.mu.Unlock()
+
+	Md.ComputeMatchDomains()
+	LoadExternalUpstreams()
 
 	return nil
 }

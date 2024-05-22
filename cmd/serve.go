@@ -30,13 +30,18 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		// Load the external upstreams
-		config.LoadExternalUpstreams()
+		var (
+			done   = make(chan bool)
+			ticker *time.Ticker
+		)
 
-		var done = make(chan bool)
 		go config.WatchConfigFile(cfgFile, done)
 
-		ticker := time.NewTicker(10 * time.Second)
+		if config.Cfg.ExternalUpstreamsInternal > 0 {
+			ticker = time.NewTicker(time.Duration(config.Cfg.ExternalUpstreamsInternal) * time.Minute)
+		} else {
+			ticker = time.NewTicker(5 * time.Minute)
+		}
 		go func() {
 			for {
 				select {
@@ -49,9 +54,7 @@ to quickly create a Cobra application.`,
 		}()
 
 		srv := &dns.Server{Addr: config.Cfg.Server.GetListenAddress(), Net: "udp"}
-		srv.Handler = &server.DNSHandler{
-			RouterConf: *config.Cfg,
-		}
+		srv.Handler = &server.DNSHandler{}
 		log.Info().Msgf("Server listening on %s", config.Cfg.Server.GetListenAddress())
 
 		if err := srv.ListenAndServe(); err != nil {

@@ -62,9 +62,9 @@ func LoadExternalUpstreams() {
 			for _, u := range external.Upstreams {
 				u.CompileRegex()
 				u.CompileDnsServers()
-				mutex.Lock()
+				Cfg.mu.Lock()
 				Cfg.Upstreams = append(Cfg.Upstreams, u)
-				mutex.Unlock()
+				Cfg.mu.Unlock()
 			}
 
 			updated = true

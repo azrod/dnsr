@@ -10,7 +10,6 @@ import (
 
 type (
 	DNSHandler struct {
-		RouterConf config.Config
 	}
 
 	DNSRequest struct {
@@ -30,7 +29,7 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 	dr := DNSRequest{
 		msg:               &msg,
-		defaultDnsServers: h.RouterConf.Server.DefaultUpstream,
+		defaultDnsServers: config.Cfg.Server.DefaultUpstream,
 	}
 
 	// Send the request to the upstream server
