@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/azrod/dnsr/internal/config"
-	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
@@ -23,8 +22,6 @@ var checkConfigCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Configuration file located at %s is valid\n", cfgFile)
-
-		pretty.Print(config.Cfg)
 	},
 }
 

@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
@@ -36,15 +37,22 @@ type (
 		Host            string   `yaml:"host"`
 		Port            int      `yaml:"port"`
 		DefaultUpstream []string `yaml:"default_upstream"`
+		LogLevel        string   `yaml:"log_level"`
+	}
+
+	Cache struct {
+		Enabled bool   `yaml:"enabled"`
+		Path    string `yaml:"path"`
 	}
 
 	Config struct {
 		mu        sync.RWMutex
 		Server    Server     `yaml:"server"`
+		Cache     Cache      `yaml:"cache"`
 		Upstreams []Upstream `yaml:"upstreams"`
 		// ExternalUpstreams is a list of URLs to fetch the upstreams from.
 		ExternalUpstreams         []ExternalUpstreamConfig `yaml:"external_upstreams"`
-		ExternalUpstreamsInternal int                      `yaml:"external_upstreams_internal"`
+		ExternalUpstreamsInterval int                      `yaml:"external_upstreams_interval"`
 	}
 
 	ExternalUpstreamConfig struct {
@@ -108,6 +116,22 @@ func (s *Server) GetListenAddress() string {
 	return fmt.Sprintf("%s:%d", s.Host, s.Port)
 }
 
+// GetLogLevel returns the log level.
+func (s *Server) GetLogLevel() zerolog.Level {
+	switch s.LogLevel {
+	case "debug":
+		return zerolog.DebugLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "warn":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	default:
+		return zerolog.InfoLevel
+	}
+}
+
 // ReadConfig reads the configuration from the given file.
 func ReadConfig(file string) error {
 	// Open the file
@@ -140,6 +164,10 @@ func ReadConfig(file string) error {
 	Md.ComputeMatchDomains()
 	LoadExternalUpstreams()
 
+	// Setup log level
+	log.Info().Msgf("Setting log level to %s", Cfg.Server.LogLevel)
+	zerolog.SetGlobalLevel(Cfg.Server.GetLogLevel())
+
 	return nil
 }
 
@@ -150,9 +178,7 @@ func WatchConfigFile(file string, done chan bool) {
 	if err != nil {
 		fmt.Println("ERROR", err)
 	}
-	defer watcher.Close()
 
-	//
 	go func() {
 		for {
 			select {
@@ -167,14 +193,15 @@ func WatchConfigFile(file string, done chan bool) {
 				// watch for errors
 			case err := <-watcher.Errors:
 				log.Error().Err(err).Msg("Error watching config file.")
+			case <-done:
+				watcher.Close()
+				return
 			}
 		}
 	}()
 
 	// out of the box fsnotify can watch a single file, or a single directory
 	if err := watcher.Add(file); err != nil {
-		fmt.Println("ERROR", err)
+		log.Error().Err(err).Msg("Error adding file to watcher.")
 	}
-
-	<-done
 }

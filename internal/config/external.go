@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"sync"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/rs/zerolog/log"
@@ -22,57 +23,71 @@ var hdbe = HashDBExternal{
 // LoadExternalUpstreams loads the external upstreams from the URLs provided in the configuration file
 func LoadExternalUpstreams() {
 
-	var updated = false
+	// WaitGroup to wait for all the external upstreams to be fetched
+	var (
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+		updated bool
+	)
 
-	client := resty.New()
-	for _, url := range Cfg.ExternalUpstreams {
-		log.Debug().Msgf("Fetching upstreams from %s", url.URL)
+	for i, url := range Cfg.ExternalUpstreams {
+		wg.Add(1)
+		go func(url ExternalUpstreamConfig, i int) {
+			defer wg.Done()
 
-		c := client.R().
-			SetHeader("Accept", "application/yaml")
+			client := resty.New()
+			client.SetTimeout(5 * time.Second)
+			log.Info().Msgf("Fetching upstreams (%d/%d) from %s", i+1, len(Cfg.ExternalUpstreams), url.URL)
 
-		if url.Token != "" {
-			c.SetAuthToken(url.Token)
-		}
+			c := client.R().
+				SetHeader("Accept", "application/yaml")
 
-		if url.Username != "" && url.Password != "" {
-			c.SetBasicAuth(url.Username, url.Password)
-		}
-
-		resp, err := c.Get(url.URL)
-		if err != nil {
-			log.Error().Err(err).Msgf("Error fetching upstreams from %s", url)
-			continue
-		}
-
-		if resp.StatusCode() != 200 {
-			log.Error().Msgf("Error fetching upstreams from %s: %s", url, resp.Status())
-			continue
-		}
-
-		var external ExternalUpstream
-
-		if hdbe.HasUpdated(url.URL, resp.Body()) {
-			if err := yaml.Unmarshal(resp.Body(), &external); err != nil {
-				log.Error().Err(err).Msgf("Error decoding upstreams from %s", url.URL)
-				continue
+			if url.Token != "" {
+				c.SetAuthToken(url.Token)
 			}
 
-			log.Info().Msgf("Updating upstreams from %s. Found %d upstream(s)", url.URL, len(external.Upstreams))
-			for _, u := range external.Upstreams {
-				u.CompileRegex()
-				u.CompileDnsServers()
-				Cfg.mu.Lock()
-				Cfg.Upstreams = append(Cfg.Upstreams, u)
-				Cfg.mu.Unlock()
+			if url.Username != "" && url.Password != "" {
+				c.SetBasicAuth(url.Username, url.Password)
 			}
 
-			updated = true
-			hdbe.Update(url.URL, hdbe.ComputeHash(url.URL, resp.Body()))
-		}
+			resp, err := c.Get(url.URL)
+			if err != nil {
+				log.Error().Err(err).Msgf("Error fetching upstreams from %s", url)
+				return
+			}
 
+			if resp.StatusCode() != 200 {
+				log.Error().Msgf("Error fetching upstreams from %s: %s", url, resp.Status())
+				return
+			}
+
+			var external ExternalUpstream
+
+			if hdbe.HasUpdated(url.URL, resp.Body()) {
+				if err := yaml.Unmarshal(resp.Body(), &external); err != nil {
+					log.Error().Err(err).Msgf("Error decoding upstreams from %s", url.URL)
+					return
+				}
+
+				log.Info().Msgf("Found %d upstream(s) from %s", len(external.Upstreams), url.URL)
+
+				for _, u := range external.Upstreams {
+					u.CompileRegex()
+					u.CompileDnsServers()
+					Cfg.mu.Lock()
+					Cfg.Upstreams = append(Cfg.Upstreams, u)
+					Cfg.mu.Unlock()
+				}
+
+				mu.Lock()
+				updated = true
+				mu.Unlock()
+				hdbe.Update(url.URL, hdbe.ComputeHash(url.URL, resp.Body()))
+			}
+		}(url, i)
 	}
 
+	wg.Wait()
 	if updated {
 		Md.ComputeMatchDomains()
 	}

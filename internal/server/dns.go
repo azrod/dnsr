@@ -25,7 +25,7 @@ func (d *DNSRequest) Forward(domain string) (DNSRCode int) {
 			continue
 		}
 		if upstreamResponse.Rcode == dns.RcodeSuccess {
-			log.Debug().Msgf("Sending request to %s for %s took %v", dnsServer, domain, timeD)
+			log.Info().Msgf("Sending request to %s for %s took %v", dnsServer, domain, timeD)
 			d.msg.Answer = upstreamResponse.Answer
 			return dns.RcodeSuccess
 		}

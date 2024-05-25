@@ -5,8 +5,11 @@ package cmd
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/azrod/dnsr/internal/cache"
 	"github.com/azrod/dnsr/internal/config"
 	"github.com/azrod/dnsr/internal/server"
 	"github.com/miekg/dns"
@@ -25,46 +28,74 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		var (
+			sigs   = make(chan os.Signal, 1)
+			ticker *time.Ticker
+			done   = make(chan bool, 1)
+		)
+
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 		if err := config.ReadConfig(cfgFile); err != nil {
 			log.Error().Err(err).Msg("Error reading the configuration file")
 			return
 		}
 
-		var (
-			done   = make(chan bool)
-			ticker *time.Ticker
-		)
+		config.WatchConfigFile(cfgFile, done)
 
-		go config.WatchConfigFile(cfgFile, done)
-
-		if config.Cfg.ExternalUpstreamsInternal > 0 {
-			ticker = time.NewTicker(time.Duration(config.Cfg.ExternalUpstreamsInternal) * time.Minute)
+		if config.Cfg.ExternalUpstreamsInterval > 0 {
+			ticker = time.NewTicker(time.Duration(config.Cfg.ExternalUpstreamsInterval) * time.Minute)
 		} else {
 			ticker = time.NewTicker(5 * time.Minute)
 		}
 		go func() {
 			for {
 				select {
-				case <-done:
-					return
 				case <-ticker.C:
 					config.LoadExternalUpstreams()
+				case <-done:
+					return
 				}
 			}
 		}()
 
 		srv := &dns.Server{Addr: config.Cfg.Server.GetListenAddress(), Net: "udp"}
 		srv.Handler = &server.DNSHandler{}
-		log.Info().Msgf("Server listening on %s", config.Cfg.Server.GetListenAddress())
 
-		if err := srv.ListenAndServe(); err != nil {
-			log.Error().Err(err).Msg("Error starting the server")
-			// done chan is used to signal the watcher to stop
-			done <- true
-			os.Exit(1)
+		if config.Cfg.Cache.Enabled {
+			ca, err := cache.New()
+			if err != nil {
+				log.Error().Err(err).Msg("Error creating cache")
+			}
+			srv.Handler = &server.DNSHandler{Cache: ca}
 		}
-		// nolint: errcheck
-		defer srv.Shutdown()
+
+		log.Info().Msgf("Server listening on %s", config.Cfg.Server.GetListenAddress())
+		go func() {
+			if err := srv.ListenAndServe(); err != nil {
+				log.Error().Err(err).Msg("Error starting the server")
+				// send signal to sigs channel with error
+				sigs <- syscall.SIGINT
+			}
+		}()
+
+		<-sigs
+		log.Info().Msg("Received signal to shut down the server")
+
+		// send signal to done channel
+		done <- true
+
+		if err := srv.Shutdown(); err != nil {
+			log.Error().Err(err).Msg("Error shutting down the server")
+		}
+
+		if config.Cfg.Cache.Enabled {
+			if err := cache.PersistCache(srv.Handler.(*server.DNSHandler).Cache); err != nil {
+				log.Error().Err(err).Msg("Error persisting cache before shutting down")
+			}
+		}
+
 	},
 }
 
