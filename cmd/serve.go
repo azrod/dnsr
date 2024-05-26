@@ -9,15 +9,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/azrod/dnsr/internal/cache"
-	"github.com/azrod/dnsr/internal/config"
-	"github.com/azrod/dnsr/internal/server"
 	"github.com/miekg/dns"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/azrod/dnsr/internal/cache"
+	"github.com/azrod/dnsr/internal/config"
+	"github.com/azrod/dnsr/internal/server"
 )
 
-// serveCmd represents the serve command
+// serveCmd represents the serve command.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "A brief description of your command",
@@ -27,8 +28,7 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-
+	Run: func(_ *cobra.Command, _ []string) {
 		var (
 			sigs   = make(chan os.Signal, 1)
 			ticker *time.Ticker
@@ -95,7 +95,6 @@ to quickly create a Cobra application.`,
 				log.Error().Err(err).Msg("Error persisting cache before shutting down")
 			}
 		}
-
 	},
 }
 

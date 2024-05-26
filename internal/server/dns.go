@@ -5,13 +5,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Forwards DNS requests to the appropriate upstream server
-func (d *DNSRequest) Forward(domain string) (DNSRCode int) {
+// Forwards DNS requests to the appropriate upstream server.
+func (d *DNSRequest) Forward(domain string) (dnsRCode int) {
 	// Create a new client
 	c := new(dns.Client)
 
 	dnsServers := d.dnsServers
-	dnsServers = append(dnsServers, d.defaultDnsServers...)
+	dnsServers = append(dnsServers, d.defaultDNSServers...)
 
 	m := new(dns.Msg)
 	m.RecursionDesired = true

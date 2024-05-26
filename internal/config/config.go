@@ -36,8 +36,8 @@ type (
 	Server struct {
 		Host            string   `yaml:"host"`
 		Port            int      `yaml:"port"`
-		DefaultUpstream []string `yaml:"default_upstream"`
-		LogLevel        string   `yaml:"log_level"`
+		DefaultUpstream []string `yaml:"defaultUpstream"`
+		LogLevel        string   `yaml:"logLevel"`
 	}
 
 	Cache struct {
@@ -51,8 +51,8 @@ type (
 		Cache     Cache      `yaml:"cache"`
 		Upstreams []Upstream `yaml:"upstreams"`
 		// ExternalUpstreams is a list of URLs to fetch the upstreams from.
-		ExternalUpstreams         []ExternalUpstreamConfig `yaml:"external_upstreams"`
-		ExternalUpstreamsInterval int                      `yaml:"external_upstreams_interval"`
+		ExternalUpstreams         []ExternalUpstreamConfig `yaml:"externalUpstreams"`
+		ExternalUpstreamsInterval int                      `yaml:"externalUpstreamsInterval"`
 	}
 
 	ExternalUpstreamConfig struct {
@@ -75,9 +75,9 @@ func (u *Upstream) CompileRegex() {
 	}
 }
 
-func (u *Upstream) CompileDnsServers() {
+func (u *Upstream) CompileDNSServers() {
 	for i, server := range u.DNSServers {
-		u.DNSServers[i] = net.JoinHostPort(string(server), "53")
+		u.DNSServers[i] = net.JoinHostPort(server, "53")
 	}
 }
 
@@ -101,7 +101,7 @@ func (m *MatchDomains) Clear() {
 	m.Regex = make(map[*regexp.Regexp][]string)
 }
 
-// Compute MatchDomains from the Upstreams
+// Compute MatchDomains from the Upstreams.
 func (m *MatchDomains) ComputeMatchDomains() {
 	m.Clear()
 	for _, u := range Cfg.Upstreams {
@@ -156,7 +156,7 @@ func ReadConfig(file string) error {
 	// TODO Parallelize this
 	for i := range Cfg.Upstreams {
 		Cfg.Upstreams[i].CompileRegex()
-		Cfg.Upstreams[i].CompileDnsServers()
+		Cfg.Upstreams[i].CompileDNSServers()
 	}
 
 	Cfg.mu.Unlock()
@@ -176,7 +176,8 @@ func WatchConfigFile(file string, done chan bool) {
 	// creates a new file watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Println("ERROR", err)
+		log.Error().Err(err).Msg("Error creating watcher.")
+		return
 	}
 
 	go func() {

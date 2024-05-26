@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/azrod/dnsr/internal/cache/base"
-	"github.com/azrod/dnsr/internal/config"
 	"github.com/miekg/dns"
 	"github.com/rs/zerolog/log"
+
+	"github.com/azrod/dnsr/internal/cache/base"
+	"github.com/azrod/dnsr/internal/config"
 )
 
 type (
@@ -18,11 +19,11 @@ type (
 	DNSRequest struct {
 		msg               *dns.Msg
 		dnsServers        []string
-		defaultDnsServers []string
+		defaultDNSServers []string
 	}
 )
 
-// ServeDNS will handle incoming dns requests and forward them onwards
+// ServeDNS will handle incoming dns requests and forward them onwards.
 func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	msg := dns.Msg{}
 	msg.SetReply(r)
@@ -115,10 +116,9 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 				msg.Answer = append(msg.Answer, value...)
 			}
 		} else {
-
 			dr := DNSRequest{
 				msg:               &msg,
-				defaultDnsServers: config.Cfg.Server.DefaultUpstream,
+				defaultDNSServers: config.Cfg.Server.DefaultUpstream,
 			}
 
 			// Send the request to the upstream server
@@ -152,7 +152,6 @@ func (h *DNSHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 			default:
 				msg.Answer = dr.msg.Answer
 			}
-
 		}
 	}
 

@@ -8,7 +8,7 @@ import (
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "cmd",
 	Short: "A brief description of your application",
@@ -34,5 +34,4 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "config.yaml", "config file (default is ./config.yaml)")
-
 }

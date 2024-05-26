@@ -49,7 +49,7 @@ type CacheValue struct {
 	ExpireAt time.Time
 }
 
-// GetExpireAt returns the expiration time
-func GetExpireAt(TTL int) time.Time {
-	return time.Now().Add(time.Duration(TTL) * time.Second)
+// GetExpireAt returns the expiration time.
+func GetExpireAt(ttl int) time.Time {
+	return time.Now().Add(time.Duration(ttl) * time.Second)
 }
