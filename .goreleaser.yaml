@@ -42,7 +42,6 @@ dockers:
     use: buildx
     ids:
       - dnsr
-      - glctl
     build_flag_templates:
     - --platform=linux/amd64
     - --pull
@@ -63,7 +62,6 @@ dockers:
     use: buildx
     ids:
       - dnsr
-      - glctl
     build_flag_templates:
     - --platform=linux/arm64/v8
     - --pull
