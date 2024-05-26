@@ -36,8 +36,6 @@ dockers:
   - goarch: amd64 
     image_templates:
     - "ghcr.io/azrod/{{.ProjectName}}:v{{ .Version }}-amd64"
-    extra_files:
-      - ui/
     dockerfile: Dockerfile
     use: buildx
     ids:
@@ -56,8 +54,6 @@ dockers:
   - goarch: arm64
     image_templates: 
     - "ghcr.io/azrod/{{ .ProjectName }}:v{{ .Version }}-arm64v8"
-    extra_files:
-      - ui/
     dockerfile: Dockerfile
     use: buildx
     ids:
