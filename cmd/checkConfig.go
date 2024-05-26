@@ -4,24 +4,24 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 
 	"github.com/azrod/dnsr/internal/config"
-	"github.com/spf13/cobra"
 )
 
-// checkConfigCmd represents the checkConfig command
+// checkConfigCmd represents the checkConfig command.
 var checkConfigCmd = &cobra.Command{
 	Use:   "checkConfig",
 	Short: "Check the configuration file",
 	Long:  `Check the configuration file to ensure it is valid and can be used by the application.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if err := config.ReadConfig(cfgFile); err != nil {
-			fmt.Println("Error reading the configuration file:", err)
+			log.Error().Err(err).Msg("Error reading the configuration file")
 			return
 		}
 
-		fmt.Printf("Configuration file located at %s is valid\n", cfgFile)
+		log.Info().Msg("Configuration file is valid")
 	},
 }
 

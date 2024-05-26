@@ -4,9 +4,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/azrod/dnsr/cmd"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/azrod/dnsr/cmd"
 )
 
 func main() {

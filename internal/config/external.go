@@ -20,9 +20,8 @@ var hdbe = HashDBExternal{
 	db: make(map[string]string),
 }
 
-// LoadExternalUpstreams loads the external upstreams from the URLs provided in the configuration file
+// LoadExternalUpstreams loads the external upstreams from the URLs provided in the configuration file.
 func LoadExternalUpstreams() {
-
 	// WaitGroup to wait for all the external upstreams to be fetched
 	var (
 		wg      sync.WaitGroup
@@ -73,7 +72,7 @@ func LoadExternalUpstreams() {
 
 				for _, u := range external.Upstreams {
 					u.CompileRegex()
-					u.CompileDnsServers()
+					u.CompileDNSServers()
 					Cfg.mu.Lock()
 					Cfg.Upstreams = append(Cfg.Upstreams, u)
 					Cfg.mu.Unlock()
@@ -82,7 +81,7 @@ func LoadExternalUpstreams() {
 				mu.Lock()
 				updated = true
 				mu.Unlock()
-				hdbe.Update(url.URL, hdbe.ComputeHash(url.URL, resp.Body()))
+				hdbe.Update(url.URL, hdbe.ComputeHash(resp.Body()))
 			}
 		}(url, i)
 	}
@@ -93,33 +92,33 @@ func LoadExternalUpstreams() {
 	}
 }
 
-// ComputeHash computes the hash of the external upstream
-func (h *HashDBExternal) ComputeHash(url string, upstreamContent []byte) string {
+// ComputeHash computes the hash of the external upstream.
+func (h *HashDBExternal) ComputeHash(upstreamContent []byte) string {
 	return hex.EncodeToString(h.hash(upstreamContent))
 }
 
-// hash returns the hash of the external upstream
+// hash returns the hash of the external upstream.
 func (h *HashDBExternal) hash(content []byte) []byte {
 	x := sha256.Sum256(content)
 	return x[:]
 }
 
-// UpdateHash updates the hash of the external upstream
-func (h *HashDBExternal) Update(url string, hash string) {
+// UpdateHash updates the hash of the external upstream.
+func (h *HashDBExternal) Update(url, hash string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.db[url] = hash
 }
 
-// Exists checks if the external upstream exists
+// Exists checks if the external upstream exists.
 func (h *HashDBExternal) exist(url string) bool {
 	_, ok := h.db[url]
 	return ok
 }
 
-// HasUpdated checks if the external upstream has been updated
+// HasUpdated checks if the external upstream has been updated.
 func (h *HashDBExternal) HasUpdated(url string, upstreamContent []byte) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return !h.exist(url) || h.db[url] != h.ComputeHash(url, upstreamContent)
+	return !h.exist(url) || h.db[url] != h.ComputeHash(upstreamContent)
 }

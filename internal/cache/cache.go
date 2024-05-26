@@ -6,14 +6,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/miekg/dns"
+	"github.com/rs/zerolog/log"
+
 	"github.com/azrod/dnsr/internal/cache/base"
 	"github.com/azrod/dnsr/internal/cache/memory"
 	"github.com/azrod/dnsr/internal/config"
-	"github.com/miekg/dns"
-	"github.com/rs/zerolog/log"
 )
 
-// New creates a new cache
+// New creates a new cache.
 func New() (base.Cache, error) {
 	c, err := memory.New()
 	if err != nil {
@@ -52,7 +53,6 @@ func New() (base.Cache, error) {
 }
 
 func registerGobTypes() {
-
 	gob.Register(&dns.A{})
 	gob.Register(&dns.AAAA{})
 	gob.Register(&dns.NS{})
@@ -133,12 +133,10 @@ func registerGobTypes() {
 	gob.Register(&dns.SVCBIPv4Hint{})
 	gob.Register(&dns.SVCBIPv6Hint{})
 	gob.Register(&dns.SVCBDoHPath{})
-
 }
 
-// PersistCache will persist the cache to disk
+// PersistCache will persist the cache to disk.
 func PersistCache(c base.Cache) error {
-
 	// Read the cache from memory
 	// Write the cache to disk
 
@@ -166,7 +164,7 @@ func PersistCache(c base.Cache) error {
 	return nil
 }
 
-// LoadCache will load the cache from disk
+// LoadCache will load the cache from disk.
 func LoadCache() (map[string]base.CacheValue, error) {
 	// Read the cache from disk
 	file, err := os.Open(getPathCache())
@@ -174,7 +172,7 @@ func LoadCache() (map[string]base.CacheValue, error) {
 		switch {
 		case os.IsNotExist(err):
 			log.Debug().Msg("Cache file does not exist")
-			return nil, nil
+			return nil, nil //nolint:nilnil
 		default:
 			return nil, fmt.Errorf("error opening cache file: %w", err)
 		}
@@ -188,7 +186,7 @@ func LoadCache() (map[string]base.CacheValue, error) {
 	return values, decoder.Decode(&values)
 }
 
-// defaultCachePath is the default path to store the cache
+// defaultCachePath is the default path to store the cache.
 const defaultCachePath = "./cache.gob"
 
 func getPathCache() string {
