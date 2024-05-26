@@ -31,6 +31,7 @@ jobs:
           commit_options: '--no-verify --signoff'
           push_options: '--force'
           file_pattern: CHANGELOG.md
+          branch: main
           commit_user_name: github-actions[bot]
           commit_user_email: github-actions[bot]@users.noreply.github.com
           commit_author: Changelog Bot <github-actions[bot]@users.noreply.github.com>
