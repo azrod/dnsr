@@ -1,0 +1,3 @@
+```release-note:dependency
+deps: bumps github.com/miekg/dns from 1.1.59 to 1.1.61
+```
