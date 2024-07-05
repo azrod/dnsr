@@ -7,7 +7,7 @@ require (
 	github.com/go-resty/resty/v2 v2.13.1
 	github.com/miekg/dns v1.1.59
 	github.com/rs/zerolog v1.33.0
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
